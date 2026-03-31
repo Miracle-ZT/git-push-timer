@@ -1,0 +1,10 @@
+{
+  "repositories": [
+    {
+      "name": "git-push-timer",
+      "path": "~/Documents/Project/git-push-timer",
+      "branch": "master",
+      "enabled": true
+    }
+  ]
+}
