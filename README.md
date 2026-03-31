@@ -14,7 +14,7 @@
 
 ### 1. 下载
 
-从 [Releases](https://github.com/yourname/git-push-timer/releases) 下载对应平台的二进制文件：
+从 [Releases](https://github.com/Miracle-ZT/git-push-timer/releases) 下载对应平台的二进制文件：
 - macOS: `git-push-timer-darwin-amd64`
 - Windows: `git-push-timer-windows-amd64.exe`
 
