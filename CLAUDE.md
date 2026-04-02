@@ -35,16 +35,18 @@ git-push-timer/
 │       └── main.go          # 程序入口
 ├── internal/
 │   ├── config/
-│   │   └── config.go        # 配置读取（repos.json）
+│   │   └── config.go        # 配置读取（repos.json），支持 ~ 路径展开
 │   ├── executor/
 │   │   └── executor.go      # Git 执行逻辑（add/commit/push）
 │   ├── logger/
 │   │   └── logger.go        # 日志记录（输出到 logs/目录）
 │   └── scheduler/
-│       └── scheduler.go     # 定时调度（cron）
+│       └── scheduler.go     # 定时调度（cron），支持配置热加载
 ├── config/
 │   └── repos.json.example   # 配置文件示例
+├── .gitignore               # Git 忽略文件
 ├── go.mod
+├── go.sum
 └── README.md
 ```
 
@@ -59,4 +61,6 @@ git-push-timer/
 
 - 日志路径：可执行文件同级目录下的 `logs/` 子目录
 - 定时频率：硬编码在 main.go 中（`*/5 * * * *`）
-- 配置热加载：每次定时触发时重新读取配置文件
+- 配置热加载：每次定时触发时重新读取配置文件，修改后无需重启程序
+- 路径支持：`~` 开头路径会自动展开为用户主目录，也支持绝对路径
+- `config/repos.json` 是本地配置文件，不提交到 Git

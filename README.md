@@ -33,7 +33,7 @@
     },
     {
       "name": "Bruno",
-      "path": "~/Documents/BrunoCollections",
+      "path": "/Users/yourname/Documents/BrunoCollections",
       "branch": "main",
       "enabled": true
     }
@@ -45,9 +45,11 @@
 | 字段 | 说明 |
 |------|------|
 | `name` | 仓库名称（用于日志标识） |
-| `path` | 本地目录路径（支持 `~` 简写） |
+| `path` | 本地目录路径（支持 `~` 和绝对路径） |
 | `branch` | 推送的分支名 |
 | `enabled` | 是否启用 |
+
+**注意：** 配置文件支持热加载，修改后无需重启程序，下次定时检查时会自动应用新配置。
 
 ### 3. 前置要求
 
@@ -79,6 +81,8 @@ logs/
   2026-04-01.log
 ```
 
+`logs/` 目录已在 `.gitignore` 中，不会被提交到 Git。
+
 ## 自行编译
 
 ```bash
@@ -91,6 +95,8 @@ GOOS=darwin GOARCH=amd64 go build -o git-push-timer ./cmd/git-push-timer
 # Windows 编译
 GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
 ```
+
+编译后的二进制文件是独立的，无需安装 Go 运行时即可运行。
 
 ## 项目结构
 
@@ -106,10 +112,15 @@ git-push-timer/
 │   └── scheduler/           # 定时调度
 ├── config/
 │   └── repos.json.example   # 配置示例
-└── go.mod
+├── .gitignore               # Git 忽略文件
+├── go.mod
+├── go.sum
+└── README.md
 ```
 
 ## 开发注意事项
 
 - 默认 Cron 表达式：`*/5 * * * *`（每 5 分钟执行一次）
 - 修改频率需要改代码：`cmd/git-push-timer/main.go` 中的 `cronSpec` 变量
+- 配置热加载：每次定时触发时重新读取配置文件，修改后无需重启程序
+- `config/repos.json` 是本地配置文件，已在 `.gitignore` 中，不会被提交
