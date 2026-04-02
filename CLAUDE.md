@@ -53,14 +53,14 @@ git-push-timer/
 ## Architecture
 
 1. **main.go** 启动后加载配置，创建日志、执行器、调度器
-2. **scheduler** 使用 cron 每 5 分钟触发一次检查
+2. **scheduler** 为每个仓库创建独立的 cron 定时任务
 3. **executor** 遍历所有配置的仓库，检测变更并执行 git push
 4. **logger** 将日志输出到 `<可执行文件目录>/logs/`
 
 ## Key Design Decisions
 
 - 日志路径：可执行文件同级目录下的 `logs/` 子目录
-- 定时频率：硬编码在 main.go 中（`*/5 * * * *`）
-- 配置热加载：每次定时触发时重新读取配置文件，修改后无需重启程序
+- 定时频率：支持每个仓库独立配置 Cron 表达式，默认为 `*/5 * * * *`（每 5 分钟）
+- 配置热加载：`enabled` 字段支持热切换，`cronSpec` 修改后需要重启程序
 - 路径支持：`~` 开头路径会自动展开为用户主目录，也支持绝对路径
 - `config/repos.json` 是本地配置文件，不提交到 Git

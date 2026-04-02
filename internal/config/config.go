@@ -10,10 +10,11 @@ import (
 
 // Repository 代表一个需要监控的 Git 仓库
 type Repository struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Branch  string `json:"branch"`
-	Enabled bool   `json:"enabled"`
+	Name     string `json:"name"`
+	Path     string `json:"path"`
+	Branch   string `json:"branch"`
+	Enabled  bool   `json:"enabled"`
+	CronSpec string `json:"cronSpec,omitempty"` // 可选，为空则使用默认值
 }
 
 // Config 配置文件结构

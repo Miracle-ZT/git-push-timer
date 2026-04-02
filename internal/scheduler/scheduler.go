@@ -8,6 +8,9 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+// 默认 Cron 表达式（每 5 分钟）
+const defaultCronSpec = "*/5 * * * *"
+
 // Scheduler 定时调度器
 type Scheduler struct {
 	cron     *cron.Cron
@@ -25,42 +28,44 @@ func New(logger *logger.Logger, executor *executor.Executor) *Scheduler {
 }
 
 // Start 启动调度器
-func (s *Scheduler) Start(spec string) error {
-	// 解析 cron 表达式
-	_, err := s.cron.AddFunc(spec, func() {
-		// 每次定时触发时重新读取配置文件（热更新）
-		cfg, err := config.Load()
-		if err != nil {
-			s.logger.Error("加载配置失败：%v", err)
-			return
-		}
-		s.RunAllRepositories(cfg)
-	})
+func (s *Scheduler) Start() error {
+	// 加载配置
+	cfg, err := config.Load()
 	if err != nil {
+		s.logger.Error("加载配置失败：%v", err)
 		return err
 	}
 
-	s.cron.Start()
-	s.logger.Info("调度器已启动，定时：%s", spec)
-	return nil
-}
-
-// RunAllRepositories 遍历所有启用的仓库（公开方法）
-func (s *Scheduler) RunAllRepositories(cfg *config.Config) {
-	s.logger.Info("=== 开始检查所有仓库 ===")
-
+	// 为每个启用的仓库创建独立的定时任务
 	for _, repo := range cfg.Repositories {
 		if !repo.Enabled {
-			s.logger.Info("仓库 %s 已禁用，跳过", repo.Name)
 			continue
 		}
 
-		if err := s.executor.ExecuteRepository(repo); err != nil {
-			s.logger.Error("仓库 %s 处理失败：%v", repo.Name, err)
+		// 使用仓库自己的 CronSpec，如果没有则用默认值
+		cronSpec := repo.CronSpec
+		if cronSpec == "" {
+			cronSpec = defaultCronSpec
 		}
+
+		// 为这个仓库创建定时任务（捕获循环变量）
+		repo := repo
+		_, err := s.cron.AddFunc(cronSpec, func() {
+			s.logger.Info("触发仓库：%s", repo.Name)
+			if err := s.executor.ExecuteRepository(repo); err != nil {
+				s.logger.Error("仓库 %s 处理失败：%v", repo.Name, err)
+			}
+		})
+		if err != nil {
+			s.logger.Error("为仓库 %s 创建定时任务失败：%v", repo.Name, err)
+			continue
+		}
+		s.logger.Info("仓库 %s 已调度，频率：%s", repo.Name, cronSpec)
 	}
 
-	s.logger.Info("=== 所有仓库检查完成 ===")
+	s.cron.Start()
+	s.logger.Info("调度器已启动")
+	return nil
 }
 
 // Stop 停止调度器

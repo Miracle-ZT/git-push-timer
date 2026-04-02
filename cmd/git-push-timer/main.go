@@ -37,16 +37,11 @@ func main() {
 	exec := executor.New(log)
 	sched := scheduler.New(log, exec)
 
-	// 启动调度器（每 5 分钟执行一次）
-	cronSpec := "*/5 * * * *"
-	if err := sched.Start(cronSpec); err != nil {
+	// 启动调度器（为每个仓库创建独立的定时任务）
+	if err := sched.Start(); err != nil {
 		log.Error("启动调度器失败：%v", err)
 		os.Exit(1)
 	}
-
-	// 立即执行一次（使用初次加载的配置）
-	log.Info("执行初次检查...")
-	sched.RunAllRepositories(cfg)
 
 	// 等待退出信号
 	log.Info("按 Ctrl+C 退出程序")
