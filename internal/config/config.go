@@ -3,7 +3,9 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strings"
 )
 
 // Repository 代表一个需要监控的 Git 仓库
@@ -43,4 +45,20 @@ func Load() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+// ExpandTilde 将路径中的 ~ 展开为用户主目录
+func ExpandTilde(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+
+	// 获取当前用户
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	// 替换 ~ 为用户主目录
+	return filepath.Join(usr.HomeDir, strings.TrimPrefix(path, "~")), nil
 }

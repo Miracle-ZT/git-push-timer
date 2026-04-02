@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 日志目录
+logs/
+*.log
+
+# 编译产物
+dist/
+git-push-timer
+git-push-timer.exe
+
+# Go
+go.sum

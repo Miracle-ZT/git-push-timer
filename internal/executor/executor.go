@@ -25,18 +25,25 @@ func New(logger *logger.Logger) *Executor {
 
 // ExecuteRepository 执行单个仓库的 commit 和 push
 func (e *Executor) ExecuteRepository(repo config.Repository) error {
-	e.logger.Info("开始处理仓库：%s (%s)", repo.Name, repo.Path)
+	// 展开路径中的 ~
+	path, err := config.ExpandTilde(repo.Path)
+	if err != nil {
+		e.logger.Error("路径展开失败：%s", repo.Path)
+		return err
+	}
+
+	e.logger.Info("开始处理仓库：%s (%s)", repo.Name, path)
 
 	// 检查目录是否存在
-	if _, err := os.Stat(repo.Path); os.IsNotExist(err) {
-		e.logger.Error("目录不存在：%s", repo.Path)
-		return fmt.Errorf("directory not found: %s", repo.Path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		e.logger.Error("目录不存在：%s", path)
+		return fmt.Errorf("directory not found: %s", path)
 	}
 
 	// 切换到仓库目录
 	oldDir, _ := os.Getwd()
-	if err := os.Chdir(repo.Path); err != nil {
-		e.logger.Error("无法进入目录：%s", repo.Path)
+	if err := os.Chdir(path); err != nil {
+		e.logger.Error("无法进入目录：%s", path)
 		return err
 	}
 	defer os.Chdir(oldDir)
