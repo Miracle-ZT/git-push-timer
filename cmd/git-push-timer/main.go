@@ -24,7 +24,7 @@ func main() {
 
 	log.Info("Git Push Timer 启动")
 
-	// 加载配置
+	// 加载配置（初次启动时加载）
 	cfg, err := config.Load()
 	if err != nil {
 		log.Error("加载配置失败：%v", err)
@@ -39,12 +39,12 @@ func main() {
 
 	// 启动调度器（每 5 分钟执行一次）
 	cronSpec := "*/5 * * * *"
-	if err := sched.Start(cfg, cronSpec); err != nil {
+	if err := sched.Start(cronSpec); err != nil {
 		log.Error("启动调度器失败：%v", err)
 		os.Exit(1)
 	}
 
-	// 立即执行一次
+	// 立即执行一次（使用初次加载的配置）
 	log.Info("执行初次检查...")
 	sched.RunAllRepositories(cfg)
 

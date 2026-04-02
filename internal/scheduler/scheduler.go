@@ -25,9 +25,15 @@ func New(logger *logger.Logger, executor *executor.Executor) *Scheduler {
 }
 
 // Start 启动调度器
-func (s *Scheduler) Start(cfg *config.Config, spec string) error {
+func (s *Scheduler) Start(spec string) error {
 	// 解析 cron 表达式
 	_, err := s.cron.AddFunc(spec, func() {
+		// 每次定时触发时重新读取配置文件（热更新）
+		cfg, err := config.Load()
+		if err != nil {
+			s.logger.Error("加载配置失败：%v", err)
+			return
+		}
 		s.RunAllRepositories(cfg)
 	})
 	if err != nil {
