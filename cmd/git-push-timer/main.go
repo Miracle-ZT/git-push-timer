@@ -13,6 +13,17 @@ import (
 	"git-push-timer/internal/scheduler"
 )
 
+// 版本号，通过 -ldflags 注入
+var version = "dev"
+
+// 支持 --version 参数
+func init() {
+	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version" || os.Args[1] == "version") {
+		fmt.Printf("git-push-timer %s\n", version)
+		os.Exit(0)
+	}
+}
+
 func main() {
 	// 初始化日志
 	log, err := logger.New()
@@ -22,7 +33,7 @@ func main() {
 	}
 	defer log.Close()
 
-	log.Info("Git Push Timer 启动")
+	log.Info("Git Push Timer %s", version)
 
 	// 加载配置（初次启动时加载）
 	cfg, err := config.Load()

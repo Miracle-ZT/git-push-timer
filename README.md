@@ -15,8 +15,16 @@
 ### 1. 下载
 
 从 [Releases](https://github.com/Miracle-ZT/git-push-timer/releases) 下载对应平台的二进制文件：
-- macOS: `git-push-timer-darwin-amd64`
-- Windows: `git-push-timer-windows-amd64.exe`
+- macOS: `git-push-timer_darwin_amd64.zip`
+- Windows: `git-push-timer_windows_amd64.zip`
+
+下载后解压，得到可执行文件 `git-push-timer` 或 `git-push-timer.exe`。
+
+**查看版本：**
+
+```bash
+./git-push-timer --version
+```
 
 ### 2. 配置
 
