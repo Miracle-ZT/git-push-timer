@@ -60,8 +60,7 @@
 | `0 */6 * * *` | 每 6 小时 |
 
 **注意：**
-- 配置文件修改后，需要重启程序才能应用新的 `cronSpec` 配置
-- `enabled` 字段支持热切换，修改后下次定时触发时生效
+- 配置文件修改后，需要重启程序才能生效（包括 `enabled` 和 `cronSpec`）
 
 ### 3. 前置要求
 
@@ -132,7 +131,7 @@ git-push-timer/
 
 ## 开发注意事项
 
-- 默认 Cron 表达式：`*/5 * * * *`（每 5 分钟执行一次）
-- 修改频率需要改代码：`cmd/git-push-timer/main.go` 中的 `cronSpec` 变量
-- 配置热加载：每次定时触发时重新读取配置文件，修改后无需重启程序
+- 默认 Cron 表达式：`*/5 * * * *`（每 5 分钟执行一次），定义在 `internal/scheduler/scheduler.go` 中的 `defaultCronSpec` 常量
+- 修改频率需要改代码：调整 `defaultCronSpec` 的值，或修改配置文件中的 `cronSpec` 字段
+- 配置生效：修改 `enabled` 或 `cronSpec` 后需要重启程序
 - `config/repos.json` 是本地配置文件，已在 `.gitignore` 中，不会被提交
