@@ -37,7 +37,8 @@
       "name": "Obsidian",
       "path": "~/ObsidianVault",
       "branch": "main",
-      "enabled": true
+      "enabled": true,
+      "cronSpec": "*/5 * * * *"
     },
     {
       "name": "Bruno",
