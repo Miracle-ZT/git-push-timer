@@ -15,7 +15,7 @@
 | 方案 | 选择 | 理由 |
 |------|------|------|
 | 语言 | Go 1.21 | 用户有 Java 背景，学 Go 很快；跨平台编译；单文件部署 |
-| 定时调度 | robfig/cron/v3 | 内置 cron，不依赖系统定时任务，跨平台一致 |
+| 定时调度 | robfig/cron/v3 | 用于解析 Cron 表达式并计算下一次执行时间，不依赖系统定时任务 |
 | 日志 | 文件日志 | 输出到 `<可执行文件所在目录>/logs/` |
 
 ---
@@ -26,17 +26,16 @@
 ┌─────────────────────────────────────────────────────────┐
 │                  Git Push Timer (Go)                    │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │              Scheduler (cron 库)                 │   │
-│  │           每 5 分钟触发一次执行                   │   │
+│  │       Scheduler（Cron 解析 + 60s 轮询）          │   │
+│  │    维护每个仓库的 nextRun，并按整分钟检查         │   │
 │  └─────────────────────┬───────────────────────────┘   │
 │                        │                                 │
 │                        ▼                                 │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │              Executor                           │   │
-│  │  1. 读取 config/repos.json                      │   │
-│  │  2. 遍历所有仓库                                 │   │
-│  │  3. 调用 Git 命令执行                            │   │
-│  │  4. 写入日志                                     │   │
+│  │  1. 接收已到期仓库任务                           │   │
+│  │  2. 调用 Git 命令执行                            │   │
+│  │  3. 写入日志                                     │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -63,8 +62,11 @@
 - 同时输出到控制台
 
 ### 4. 定时调度 (`internal/scheduler/scheduler.go`)
-- 使用 cron 表达式 `*/5 * * * *`（每 5 分钟）
-- 启动时立即执行一次
+- 支持每个仓库独立配置标准 5 段 Cron 表达式
+- 按整分钟进行 `60s` 轮询，检查是否有仓库到达 `nextRun`
+- 启动后从下一个匹配的 Cron 时间点开始检查，不会立即执行一次
+- 机器睡眠错过多个计划时间点时只补跑 1 次
+- 同一仓库上一次任务未结束时跳过本次执行并记录日志
 - 支持停止
 
 ---
@@ -112,23 +114,23 @@ git push
 ```
 git-push-timer/
 ├── cmd/
-│   └── git-push-timer/
-│       └── main.go          # 程序入口
+│   └── git-push-timer/                       # 程序入口
 ├── internal/
-│   ├── config/
-│   │   └── config.go        # 配置读取（repos.json）
-│   ├── executor/
-│   │   └── executor.go      # Git 执行逻辑（add/commit/push）
-│   ├── logger/
-│   │   └── logger.go        # 日志记录（输出到 logs/目录）
-│   └── scheduler/
-│       └── scheduler.go     # 定时调度（cron）
+│   ├── config/                              # 配置读取与解析
+│   ├── executor/                            # Git 检查、提交、推送
+│   ├── logger/                              # 日志输出
+│   └── scheduler/                           # 定时调度
 ├── config/
-│   └── repos.json.example   # 配置文件示例
+│   └── repos.json.example                   # 配置示例
+├── docs/                                    # 排查记录与补充文档
+├── README.md                                # 项目说明
+├── DEVELOPMENT.md                           # 开发说明
+├── CLAUDE.md                                # Claude Code 协作说明
+├── AGENTS.md                                # Codex 自定义指令与工作流规范
+├── build.sh                                 # 本地构建脚本
+├── release.sh                               # 发布打包脚本
 ├── go.mod
-├── go.sum
-├── README.md
-└── CLAUDE.md
+└── go.sum
 ```
 
 ---
@@ -163,3 +165,4 @@ GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
 - GitHub 仓库：https://github.com/Miracle-ZT/git-push-timer
 - 用户文档：README.md
 - 开发指南：CLAUDE.md
+- Codex 指令：AGENTS.md

@@ -125,19 +125,23 @@ GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
 ```
 git-push-timer/
 ├── cmd/
-│   └── git-push-timer/
-│       └── main.go          # 入口
+│   └── git-push-timer/                       # 程序入口
 ├── internal/
-│   ├── config/              # 配置读取
-│   ├── executor/            # Git 执行
-│   ├── logger/              # 日志记录
-│   └── scheduler/           # 定时调度
+│   ├── config/                              # 配置读取与解析
+│   ├── executor/                            # Git 检查、提交、推送
+│   ├── logger/                              # 日志输出
+│   └── scheduler/                           # 定时调度
 ├── config/
-│   └── repos.json.example   # 配置示例
-├── .gitignore               # Git 忽略文件
+│   └── repos.json.example                   # 配置示例
+├── docs/                                    # 排查记录与补充文档
+├── README.md                                # 项目说明
+├── DEVELOPMENT.md                           # 开发说明
+├── build.sh                                 # 本地构建脚本
+├── release.sh                               # 发布打包脚本
+├── LICENSE
+├── .gitignore                               # Git 忽略规则
 ├── go.mod
-├── go.sum
-└── README.md
+└── go.sum
 ```
 
 ## 开发注意事项
