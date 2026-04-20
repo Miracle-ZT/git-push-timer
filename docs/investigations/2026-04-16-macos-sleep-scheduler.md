@@ -1,5 +1,7 @@
 # Git Push Timer 排查记录（2026-04-16）
 
+说明：为保护本地环境隐私，文中的绝对路径、用户名、进程号、仓库标识等信息已做脱敏处理；时间线、日志模式和结论保留原始语义。
+
 ## 1. 目的
 
 记录本轮对 `git-push-timer` 项目的两类问题排查过程，方便后续继续复盘：
@@ -13,25 +15,25 @@
 
 ## 2. 相关路径与对象
 
-- 开发仓库：`/Users/tgb/Documents/Project/git-push-timer`
-- release 目录：`/Users/tgb/Documents/git-push-timer`
-- release 可执行文件：`/Users/tgb/Documents/git-push-timer/git-push-timer`
-- release 配置文件：`/Users/tgb/Documents/git-push-timer/config/repos.json`
-- release 日志文件：`/Users/tgb/Documents/git-push-timer/logs/2026-04-14.log`
-- 当前被观察进程：`git-push-timer (PID 45808)`
+- 开发仓库：`<dev-repo-root>`
+- release 目录：`<release-root>`
+- release 可执行文件：`<release-binary>`
+- release 配置文件：`<release-config>`
+- release 日志文件：`<release-log-2026-04-14>`
+- 当前被观察进程：`git-push-timer (PID <observed-pid>)`
 
 `ps` 观察到的进程信息：
 
-- PID：`45808`
+- PID：`<observed-pid>`
 - 启动时间：`Tue Apr 14 18:03:51 2026`
 - 运行时长（观察时）：`01-16:31:45`
 - 命令：`./git-push-timer`
 
 `lsof` 观察到的关键打开文件：
 
-- `cwd`：`/Users/tgb/Documents/git-push-timer`
-- `txt`：`/Users/tgb/Documents/git-push-timer/git-push-timer`
-- 日志文件句柄：`/Users/tgb/Documents/git-push-timer/logs/2026-04-14.log`
+- `cwd`：`<release-root>`
+- `txt`：`<release-binary>`
+- 日志文件句柄：`<release-log-2026-04-14>`
 
 ---
 
@@ -79,11 +81,11 @@
 - 启动后看到日志：
   - `Git Push Timer v1.0.0`
   - `已加载 1 个仓库配置`
-  - `仓库 Bruno-TGB 已调度，频率：00 18 * * *`
+  - `仓库 <repo-name> 已调度，频率：00 18 * * *`
   - `调度器已启动`
   - `按 Ctrl+C 退出程序`
 - 到 `2026-04-16 10:27:40` 仍没有任何“触发仓库”相关后续日志
-- 进程 `45808` 仍然活着
+- 进程 `<observed-pid>` 仍然活着
 - 期间机器发生了睡眠和唤醒
 
 release 配置文件内容确认如下：
@@ -92,8 +94,8 @@ release 配置文件内容确认如下：
 {
   "repositories": [
     {
-      "name": "Bruno-TGB",
-      "path": "/Users/tgb/Documents/bruno/TGB",
+      "name": "<repo-name>",
+      "path": "<target-repo-path>",
       "branch": "main",
       "enabled": true,
       "cronSpec": "00 18 * * *"
@@ -107,7 +109,7 @@ release 配置文件内容确认如下：
 ```text
 [2026-04-14 18:03:51] INFO Git Push Timer v1.0.0
 [2026-04-14 18:03:51] INFO 已加载 1 个仓库配置
-[2026-04-14 18:03:51] INFO 仓库 Bruno-TGB 已调度，频率：00 18 * * *
+[2026-04-14 18:03:51] INFO 仓库 <repo-name> 已调度，频率：00 18 * * *
 [2026-04-14 18:03:51] INFO 调度器已启动
 [2026-04-14 18:03:51] INFO 按 Ctrl+C 退出程序
 ```
@@ -127,8 +129,8 @@ release 配置文件内容确认如下：
 做过的核对：
 
 - 对比了以下二进制的 SHA-256：
-  - `/Users/tgb/Documents/git-push-timer/git-push-timer`
-  - `/Users/tgb/Documents/Project/git-push-timer/dist/git-push-timer`
+  - `<release-binary>`
+  - `<dev-dist-binary>`
 - 结果：两者哈希完全一致
 
 结论：
@@ -137,7 +139,7 @@ release 配置文件内容确认如下：
 
 继续核对构建元数据：
 
-- `go version -m /Users/tgb/Documents/git-push-timer/git-push-timer`
+- `go version -m <release-binary>`
 - 结果显示：
   - Go 版本：`go1.21.10`
   - 依赖：`github.com/robfig/cron/v3 v3.0.1`
@@ -157,7 +159,7 @@ release 配置文件内容确认如下：
 
 观察到 release 目录里旧日志：
 
-- 文件：`/Users/tgb/Documents/git-push-timer/logs/2026-04-08.log`
+- 文件：`<release-log-2026-04-08>`
 - 内容显示该 same release 目录上的 `00 18 * * *` 曾在 `2026-04-08 18:00:00` 正常触发并成功推送
 
 结论：
@@ -344,7 +346,7 @@ timer = time.NewTimer(c.entries[0].Next.Sub(now))
 
 它能解释：
 
-1. 为什么 startup 日志正常，但后面一直没有 `触发仓库：Bruno-TGB`
+1. 为什么 startup 日志正常，但后面一直没有 `触发仓库：<repo-name>`
 2. 为什么进程还活着，却没有任何后续动作
 3. 为什么 `*/10` 这种短周期任务看起来“睡醒后能继续”，而 daily 这种长周期任务会严重漂移
 
@@ -392,7 +394,7 @@ timer = time.NewTimer(c.entries[0].Next.Sub(now))
 
 ### 已确认的事实
 
-1. release 进程 `45808` 仍活着，不是已退出
+1. release 进程 `<observed-pid>` 仍活着，不是已退出
 2. release 配置已加载，daily cron 已注册
 3. 运行中的 release 二进制和 `dist/` 下 release 产物一致
 4. 当前 release 代码和开发仓库核心 Go 代码无行为差异
@@ -413,7 +415,7 @@ daily 任务“看似一直没跑”，最可信的解释是：
 
 用户当前决定：
 
-- 不停止现有进程 `45808`
+- 不停止现有进程 `<observed-pid>`
 - 再等待 `1 到 2 天`
 
 下次回来看时，建议按下面顺序验证。
@@ -422,7 +424,7 @@ daily 任务“看似一直没跑”，最可信的解释是：
 
 优先看：
 
-- `/Users/tgb/Documents/git-push-timer/logs/2026-04-14.log`
+- `<release-log-2026-04-14>`
 
 不要先只看：
 
@@ -459,7 +461,7 @@ ps -p 45808 -o pid,ppid,lstart,etime,state,command
 
 如果满足以下条件：
 
-- 进程 `45808` 仍然活着
+- 进程 `<observed-pid>` 仍然活着
 - 同一个旧日志文件里仍然没有任何触发记录
 - 且累计可运行时间已经明显大于 `23小时56分09秒`
 
@@ -477,8 +479,8 @@ ps -p 45808 -o pid,ppid,lstart,etime,state,command
 ### 13.1 看 release 日志
 
 ```bash
-sed -n '1,260p' /Users/tgb/Documents/git-push-timer/logs/2026-04-14.log
-tail -n 100 /Users/tgb/Documents/git-push-timer/logs/2026-04-14.log
+sed -n '1,260p' <release-log-2026-04-14>
+tail -n 100 <release-log-2026-04-14>
 ```
 
 ### 13.2 看进程状态
@@ -497,14 +499,14 @@ pmset -g log | rg 'Sleep|DarkWake|Wake'
 ### 13.4 看当前 release 配置
 
 ```bash
-sed -n '1,200p' /Users/tgb/Documents/git-push-timer/config/repos.json
+sed -n '1,200p' <release-config>
 ```
 
 ### 13.5 对比二进制与构建元数据
 
 ```bash
-shasum -a 256 /Users/tgb/Documents/git-push-timer/git-push-timer /Users/tgb/Documents/Project/git-push-timer/dist/git-push-timer
-go version -m /Users/tgb/Documents/git-push-timer/git-push-timer
+shasum -a 256 <release-binary> <dev-dist-binary>
+go version -m <release-binary>
 ```
 
 ---
@@ -545,12 +547,12 @@ go version -m /Users/tgb/Documents/git-push-timer/git-push-timer
 到 `2026-04-17`，release 目录中的老日志文件出现了新的触发记录：
 
 ```text
-[2026-04-17 10:06:34] INFO 触发仓库：Bruno-TGB
-[2026-04-17 10:06:34] INFO 开始处理仓库：Bruno-TGB (/Users/tgb/Documents/bruno/TGB)
-[2026-04-17 10:06:34] INFO 仓库 Bruno-TGB 没有变更，跳过
+[2026-04-17 10:06:34] INFO 触发仓库：<repo-name>
+[2026-04-17 10:06:34] INFO 开始处理仓库：<repo-name> (<target-repo-path>)
+[2026-04-17 10:06:34] INFO 仓库 <repo-name> 没有变更，跳过
 ```
 
-并且进程 `45808` 仍然是同一个进程，没有重启。
+并且进程 `<observed-pid>` 仍然是同一个进程，没有重启。
 
 这说明：
 
@@ -695,21 +697,21 @@ go version -m /Users/tgb/Documents/git-push-timer/git-push-timer
 ```text
 [2026-04-17 14:59:50] INFO Git Push Timer dev
 [2026-04-17 14:59:50] INFO 已加载 1 个仓库配置
-[2026-04-17 14:59:50] INFO 仓库 Bruno-TGB 已调度，频率：*/20 * * * *
+[2026-04-17 14:59:50] INFO 仓库 <repo-name> 已调度，频率：*/20 * * * *
 [2026-04-17 14:59:50] INFO 调度器已启动
 [2026-04-17 14:59:50] INFO 按 Ctrl+C 退出程序
-[2026-04-17 15:00:00] INFO 触发仓库：Bruno-TGB
-[2026-04-17 15:00:00] INFO 开始处理仓库：Bruno-TGB (/Users/tgb/Documents/bruno/TGB)
-[2026-04-17 15:00:00] INFO 仓库 Bruno-TGB 没有变更，跳过
-[2026-04-17 15:30:48] INFO 触发仓库：Bruno-TGB
-[2026-04-17 15:30:48] INFO 开始处理仓库：Bruno-TGB (/Users/tgb/Documents/bruno/TGB)
-[2026-04-17 15:30:48] INFO 仓库 Bruno-TGB 没有变更，跳过
-[2026-04-17 15:40:00] INFO 触发仓库：Bruno-TGB
-[2026-04-17 15:40:00] INFO 开始处理仓库：Bruno-TGB (/Users/tgb/Documents/bruno/TGB)
-[2026-04-17 15:40:00] INFO 仓库 Bruno-TGB 没有变更，跳过
-[2026-04-17 16:00:00] INFO 触发仓库：Bruno-TGB
-[2026-04-17 16:00:00] INFO 开始处理仓库：Bruno-TGB (/Users/tgb/Documents/bruno/TGB)
-[2026-04-17 16:00:00] INFO 仓库 Bruno-TGB 没有变更，跳过
+[2026-04-17 15:00:00] INFO 触发仓库：<repo-name>
+[2026-04-17 15:00:00] INFO 开始处理仓库：<repo-name> (<target-repo-path>)
+[2026-04-17 15:00:00] INFO 仓库 <repo-name> 没有变更，跳过
+[2026-04-17 15:30:48] INFO 触发仓库：<repo-name>
+[2026-04-17 15:30:48] INFO 开始处理仓库：<repo-name> (<target-repo-path>)
+[2026-04-17 15:30:48] INFO 仓库 <repo-name> 没有变更，跳过
+[2026-04-17 15:40:00] INFO 触发仓库：<repo-name>
+[2026-04-17 15:40:00] INFO 开始处理仓库：<repo-name> (<target-repo-path>)
+[2026-04-17 15:40:00] INFO 仓库 <repo-name> 没有变更，跳过
+[2026-04-17 16:00:00] INFO 触发仓库：<repo-name>
+[2026-04-17 16:00:00] INFO 开始处理仓库：<repo-name> (<target-repo-path>)
+[2026-04-17 16:00:00] INFO 仓库 <repo-name> 没有变更，跳过
 ```
 
 从程序日志本身，可以直接得出两个事实：
@@ -855,7 +857,7 @@ go version -m /Users/tgb/Documents/git-push-timer/git-push-timer
 ```text
 [2026-04-14 18:03:51] INFO Git Push Timer v1.0.0
 ...
-[2026-04-17 10:06:34] INFO 触发仓库：Bruno-TGB
+[2026-04-17 10:06:34] INFO 触发仓库：<repo-name>
 ```
 
 对应解释：
@@ -872,10 +874,10 @@ go version -m /Users/tgb/Documents/git-push-timer/git-push-timer
 
 ```text
 [2026-04-17 14:59:50] INFO Git Push Timer dev
-[2026-04-17 15:00:00] INFO 触发仓库：Bruno-TGB
-[2026-04-17 15:30:48] INFO 触发仓库：Bruno-TGB
-[2026-04-17 15:40:00] INFO 触发仓库：Bruno-TGB
-[2026-04-17 16:00:00] INFO 触发仓库：Bruno-TGB
+[2026-04-17 15:00:00] INFO 触发仓库：<repo-name>
+[2026-04-17 15:30:48] INFO 触发仓库：<repo-name>
+[2026-04-17 15:40:00] INFO 触发仓库：<repo-name>
+[2026-04-17 16:00:00] INFO 触发仓库：<repo-name>
 ```
 
 系统日志：
