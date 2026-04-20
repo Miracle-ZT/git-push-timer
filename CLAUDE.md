@@ -67,3 +67,10 @@ git-push-timer/
 - 配置生效：修改 `enabled` 或 `cronSpec` 后需要重启程序
 - 路径支持：`~` 开头路径会自动展开为用户主目录，也支持绝对路径
 - `config/repos.json` 是本地配置文件，不提交到 Git
+
+## Documentation Responsibilities
+
+- `README.md` 面向使用者，记录安装、配置、运行方式和用户可见行为。
+- `DEVELOPMENT.md` 面向开发者，记录当前有效的架构说明、模块职责、构建方式和关键设计决策，不作为开发流水账。
+- `docs/investigations/` 用于保存排查过程、复盘记录、review 结论、日志证据和验证过程。
+- `AGENTS.md` 是 Codex 的仓库级指令文件；处理文档分工和脱敏时应与其中规则保持一致。
