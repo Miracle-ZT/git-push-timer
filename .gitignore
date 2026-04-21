@@ -9,8 +9,8 @@ logs/
 
 # 编译产物
 dist/
-git-push-timer
-git-push-timer.exe
+/git-push-timer
+/git-push-timer.exe
 
 # Go
 go.sum
