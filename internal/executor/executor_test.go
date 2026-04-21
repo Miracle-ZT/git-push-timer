@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -11,11 +12,12 @@ func TestHasRepositoryChangesReturnsFalseForCleanRepoWithoutCommits(t *testing.T
 	repoDir := t.TempDir()
 	initGitRepo(t, repoDir)
 
-	restore := chdir(t, repoDir)
+	otherDir := t.TempDir()
+	restore := chdir(t, otherDir)
 	defer restore()
 
 	exec := &Executor{}
-	hasChanges, err := exec.hasRepositoryChanges()
+	hasChanges, err := exec.hasRepositoryChanges(repoDir)
 	if err != nil {
 		t.Fatalf("hasRepositoryChanges() error = %v", err)
 	}
@@ -33,17 +35,65 @@ func TestHasRepositoryChangesDetectsUntrackedFiles(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	restore := chdir(t, repoDir)
+	otherDir := t.TempDir()
+	restore := chdir(t, otherDir)
 	defer restore()
 
 	exec := &Executor{}
-	hasChanges, err := exec.hasRepositoryChanges()
+	hasChanges, err := exec.hasRepositoryChanges(repoDir)
 	if err != nil {
 		t.Fatalf("hasRepositoryChanges() error = %v", err)
 	}
 
 	if !hasChanges {
 		t.Fatal("hasRepositoryChanges() = false, want true for untracked file")
+	}
+}
+
+func TestRunCommandOutputUsesSpecifiedWorkingDirectory(t *testing.T) {
+	repoDir := t.TempDir()
+	initGitRepo(t, repoDir)
+
+	otherDir := t.TempDir()
+	restore := chdir(t, otherDir)
+	defer restore()
+
+	exec := &Executor{}
+	output, err := exec.runCommandOutput(repoDir, "git", "rev-parse", "--show-toplevel")
+	if err != nil {
+		t.Fatalf("runCommandOutput() error = %v", err)
+	}
+
+	gotPath, err := filepath.EvalSymlinks(strings.TrimSpace(output))
+	if err != nil {
+		t.Fatalf("EvalSymlinks(output) error = %v", err)
+	}
+
+	wantPath, err := filepath.EvalSymlinks(repoDir)
+	if err != nil {
+		t.Fatalf("EvalSymlinks(repoDir) error = %v", err)
+	}
+
+	if gotPath != wantPath {
+		t.Fatalf("runCommandOutput() = %q, want %q", gotPath, wantPath)
+	}
+
+	if cwd, err := os.Getwd(); err != nil {
+		t.Fatalf("Getwd() error = %v", err)
+	} else {
+		gotCWD, err := filepath.EvalSymlinks(cwd)
+		if err != nil {
+			t.Fatalf("EvalSymlinks(cwd) error = %v", err)
+		}
+
+		wantCWD, err := filepath.EvalSymlinks(otherDir)
+		if err != nil {
+			t.Fatalf("EvalSymlinks(otherDir) error = %v", err)
+		}
+
+		if gotCWD != wantCWD {
+			t.Fatalf("Getwd() = %q, want %q", gotCWD, wantCWD)
+		}
 	}
 }
 
