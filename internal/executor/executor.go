@@ -55,7 +55,12 @@ func (e *Executor) ExecuteRepository(repo config.Repository) error {
 	}
 
 	// 检查是否有变更
-	if err := e.runCommand("git", "diff", "--quiet", "HEAD"); err == nil {
+	hasChanges, err := e.hasRepositoryChanges()
+	if err != nil {
+		e.logger.Error("检查仓库变更失败：%v", err)
+		return err
+	}
+	if !hasChanges {
 		// 没有变更，跳过
 		e.logger.Info("仓库 %s 没有变更，跳过", repo.Name)
 		return nil
@@ -86,12 +91,26 @@ func (e *Executor) ExecuteRepository(repo config.Repository) error {
 	return nil
 }
 
+func (e *Executor) hasRepositoryChanges() (bool, error) {
+	output, err := e.runCommandOutput("git", "status", "--porcelain=v1", "--untracked-files=normal")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(output) != "", nil
+}
+
 // runCommand 执行命令
 func (e *Executor) runCommand(name string, args ...string) error {
+	_, err := e.runCommandOutput(name, args...)
+	return err
+}
+
+func (e *Executor) runCommandOutput(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s %s: %v, output: %s", name, strings.Join(args, " "), err, string(output))
+		return "", fmt.Errorf("%s %s: %v, output: %s", name, strings.Join(args, " "), err, string(output))
 	}
-	return nil
+	return string(output), nil
 }

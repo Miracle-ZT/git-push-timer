@@ -58,7 +58,7 @@
 ### 2. Git 执行 (`internal/executor/executor.go`)
 - 检查目录是否存在
 - 检查是否是 Git 仓库
-- `git diff --quiet` 检测变更
+- 使用 `git status --porcelain` 检测变更（包含未跟踪文件）
 - `git add` + `git commit` + `git push`
 - 空提交保护
 
