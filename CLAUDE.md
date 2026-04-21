@@ -72,7 +72,8 @@ git-push-timer/
 
 - `README.md` 面向使用者，记录安装、配置、运行方式和用户可见行为。
 - `DEVELOPMENT.md` 面向开发者，记录当前有效的架构说明、模块职责、构建方式和关键设计决策，不作为开发流水账。
-- `docs/investigations/` 用于保存排查过程、复盘记录、review 结论、日志证据和验证过程。
+- `docs/investigations/` 用于保存围绕单一主题展开的排查过程、复盘记录、review 结论、日志证据和验证过程。
+- `docs/issue-ledger.md` 用于长期维护跨专题的问题台账，记录问题状态、关联文档、关联提交和可选优化项。
 - `AGENTS.md` 是 Codex 的仓库级指令文件；处理文档分工和脱敏时应与其中规则保持一致。
 - `AGENTS.md` 与 `CLAUDE.md` 中的共享约束需要同步维护；任一方新增或修改后，另一方也要同步更新。
 
