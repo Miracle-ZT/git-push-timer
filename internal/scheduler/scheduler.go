@@ -30,12 +30,13 @@ type scheduledRepo struct {
 
 // Scheduler 定时调度器
 type Scheduler struct {
-	logger   *logger.Logger
-	executor *executor.Executor
-	jobs     []*scheduledRepo
-	stopCh   chan struct{}
-	doneCh   chan struct{}
-	stopOnce sync.Once
+	logger    *logger.Logger
+	executor  *executor.Executor
+	jobs      []*scheduledRepo
+	stopCh    chan struct{}
+	doneCh    chan struct{}
+	runningWG sync.WaitGroup
+	stopOnce  sync.Once
 }
 
 // New 创建调度器
@@ -112,7 +113,16 @@ func (s *Scheduler) checkDueRepositories() {
 	now := time.Now()
 
 	for _, job := range s.jobs {
+		if s.isStopping() {
+			return
+		}
+
 		job.mu.Lock()
+		if s.isStopping() {
+			job.mu.Unlock()
+			return
+		}
+
 		if now.Before(job.nextRun) {
 			job.mu.Unlock()
 			continue
@@ -126,6 +136,12 @@ func (s *Scheduler) checkDueRepositories() {
 			continue
 		}
 
+		if s.isStopping() {
+			job.mu.Unlock()
+			return
+		}
+
+		s.runningWG.Add(1)
 		job.running = true
 		repo := job.repo
 		job.mu.Unlock()
@@ -140,6 +156,7 @@ func (s *Scheduler) execute(job *scheduledRepo, repo config.Repository) {
 		job.mu.Lock()
 		job.running = false
 		job.mu.Unlock()
+		s.runningWG.Done()
 	}()
 
 	if err := s.executor.ExecuteRepository(repo); err != nil {
@@ -167,11 +184,21 @@ func timeUntilNextTick(now time.Time) time.Duration {
 	return wait
 }
 
+func (s *Scheduler) isStopping() bool {
+	select {
+	case <-s.stopCh:
+		return true
+	default:
+		return false
+	}
+}
+
 // Stop 停止调度器
 func (s *Scheduler) Stop() {
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
 		<-s.doneCh
+		s.runningWG.Wait()
 		s.logger.Info("调度器已停止")
 	})
 }

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"git-push-timer/internal/logger"
 )
 
 func TestAdvanceNextRunSkipsMissedSchedules(t *testing.T) {
@@ -48,5 +50,42 @@ func TestParseCronSpecRejectsDescriptors(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "does not accept descriptors") {
 		t.Fatalf("parseCronSpec() error = %q, want descriptor rejection", err)
+	}
+}
+
+func TestStopWaitsForRunningJobs(t *testing.T) {
+	log, err := logger.New()
+	if err != nil {
+		t.Fatalf("logger.New() error = %v", err)
+	}
+	defer log.Close()
+
+	s := &Scheduler{
+		logger: log,
+		stopCh: make(chan struct{}),
+		doneCh: make(chan struct{}),
+	}
+	s.runningWG.Add(1)
+
+	stopped := make(chan struct{})
+	go func() {
+		s.Stop()
+		close(stopped)
+	}()
+
+	close(s.doneCh)
+
+	select {
+	case <-stopped:
+		t.Fatal("Stop() returned before running jobs finished")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	s.runningWG.Done()
+
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("Stop() did not return after running jobs finished")
 	}
 }

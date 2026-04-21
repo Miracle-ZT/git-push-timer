@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"git-push-timer/internal/config"
 	"git-push-timer/internal/executor"
@@ -62,6 +61,5 @@ func main() {
 
 	log.Info("正在退出...")
 	sched.Stop()
-	time.Sleep(500 * time.Millisecond)
 	log.Info("Git Push Timer 已退出")
 }
