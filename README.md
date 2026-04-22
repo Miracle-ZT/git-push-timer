@@ -1,4 +1,9 @@
 # Git Push Timer
+[![Release](https://img.shields.io/github/v/release/Miracle-ZT/git-push-timer?sort=semver&display_name=tag&label=Release)](https://github.com/Miracle-ZT/git-push-timer/releases)
+[![Go](https://img.shields.io/github/go-mod/go-version/Miracle-ZT/git-push-timer?label=Go)](https://go.dev/doc/go1.21)
+![macOS](https://img.shields.io/badge/Platform-macOS-4B5563)
+![Windows](https://img.shields.io/badge/Platform-Windows-0078D6)
+[![License](https://img.shields.io/github/license/Miracle-ZT/git-push-timer?label=License)](https://github.com/Miracle-ZT/git-push-timer/blob/master/LICENSE)
 
 跨平台（macOS + Windows）本地目录定时 Git 同步工具。
 
