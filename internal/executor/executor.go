@@ -53,25 +53,35 @@ func (e *Executor) ExecuteRepository(repo config.Repository) error {
 		e.logger.Error("检查仓库变更失败：%v", err)
 		return err
 	}
-	if !hasChanges {
-		// 没有变更，跳过
-		e.logger.Info("仓库 %s 没有变更，跳过", repo.Name)
+
+	if hasChanges {
+		// 有变更，先执行 commit
+		if err := e.runCommand(path, "git", "add", "."); err != nil {
+			e.logger.Error("git add 失败：%v", err)
+			return err
+		}
+
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		commitMsg := fmt.Sprintf("auto: %s", timestamp)
+		if err := e.runCommand(path, "git", "commit", "-m", commitMsg); err != nil {
+			e.logger.Error("git commit 失败：%v", err)
+			return err
+		}
+	}
+
+	hasUnpushedCommits, err := e.hasUnpushedCommits(path, repo.Branch)
+	if err != nil {
+		e.logger.Error("检查未推送提交失败：%v", err)
+		return err
+	}
+	if !hasUnpushedCommits {
+		if !hasChanges {
+			e.logger.Info("仓库 %s 没有变更，跳过", repo.Name)
+		} else {
+			// 正常 commit 成功后应该存在未推送提交；这里主要覆盖分支配置不一致、git hook 或其他进程在检查前已完成推送等边界情况。
+			e.logger.Info("仓库 %s 没有未推送提交，跳过推送", repo.Name)
+		}
 		return nil
-	}
-
-	// 有变更，执行 commit 和 push
-	// git add .
-	if err := e.runCommand(path, "git", "add", "."); err != nil {
-		e.logger.Error("git add 失败：%v", err)
-		return err
-	}
-
-	// git commit
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	commitMsg := fmt.Sprintf("auto: %s", timestamp)
-	if err := e.runCommand(path, "git", "commit", "-m", commitMsg); err != nil {
-		e.logger.Error("git commit 失败：%v", err)
-		return err
 	}
 
 	// git push
@@ -91,6 +101,27 @@ func (e *Executor) hasRepositoryChanges(path string) (bool, error) {
 	}
 
 	return strings.TrimSpace(output) != "", nil
+}
+
+func (e *Executor) hasUnpushedCommits(path, branch string) (bool, error) {
+	if err := e.runCommand(path, "git", "rev-parse", "--verify", "--quiet", "HEAD"); err != nil {
+		return false, nil
+	}
+
+	remoteRef := fmt.Sprintf("origin/%s", branch)
+	if err := e.runCommand(path, "git", "rev-parse", "--verify", "--quiet", remoteRef); err != nil {
+		if err := e.runCommand(path, "git", "rev-parse", "--verify", "--quiet", branch); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	output, err := e.runCommandOutput(path, "git", "rev-list", "--count", fmt.Sprintf("origin/%s..%s", branch, branch))
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(output) != "0", nil
 }
 
 // runCommand 执行命令

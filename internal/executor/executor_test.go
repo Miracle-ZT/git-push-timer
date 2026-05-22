@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"git-push-timer/internal/config"
+	"git-push-timer/internal/logger"
 )
 
 func TestHasRepositoryChangesReturnsFalseForCleanRepoWithoutCommits(t *testing.T) {
@@ -97,12 +100,141 @@ func TestRunCommandOutputUsesSpecifiedWorkingDirectory(t *testing.T) {
 	}
 }
 
+func TestHasUnpushedCommitsDetectsAheadBranch(t *testing.T) {
+	repoDir := t.TempDir()
+	remoteDir := t.TempDir()
+	initGitRepo(t, repoDir)
+	initBareGitRepo(t, remoteDir)
+	configureGitUser(t, repoDir)
+	addGitRemote(t, repoDir, remoteDir)
+	commitFile(t, repoDir, "tracked.txt", "initial\n")
+	pushBranch(t, repoDir, "master")
+
+	exec := &Executor{}
+	hasUnpushedCommits, err := exec.hasUnpushedCommits(repoDir, "master")
+	if err != nil {
+		t.Fatalf("hasUnpushedCommits() clean error = %v", err)
+	}
+	if hasUnpushedCommits {
+		t.Fatal("hasUnpushedCommits() clean = true, want false")
+	}
+
+	commitFile(t, repoDir, "tracked.txt", "updated\n")
+
+	hasUnpushedCommits, err = exec.hasUnpushedCommits(repoDir, "master")
+	if err != nil {
+		t.Fatalf("hasUnpushedCommits() ahead error = %v", err)
+	}
+	if !hasUnpushedCommits {
+		t.Fatal("hasUnpushedCommits() ahead = false, want true")
+	}
+}
+
+func TestHasUnpushedCommitsReturnsFalseForRepoWithoutCommits(t *testing.T) {
+	repoDir := t.TempDir()
+	initGitRepo(t, repoDir)
+
+	exec := &Executor{}
+	hasUnpushedCommits, err := exec.hasUnpushedCommits(repoDir, "master")
+	if err != nil {
+		t.Fatalf("hasUnpushedCommits() error = %v", err)
+	}
+	if hasUnpushedCommits {
+		t.Fatal("hasUnpushedCommits() = true, want false for repo without commits")
+	}
+}
+
+func TestExecuteRepositoryPushesCleanRepoWithUnpushedCommit(t *testing.T) {
+	repoDir := t.TempDir()
+	remoteDir := t.TempDir()
+	initGitRepo(t, repoDir)
+	initBareGitRepo(t, remoteDir)
+	configureGitUser(t, repoDir)
+	addGitRemote(t, repoDir, remoteDir)
+	commitFile(t, repoDir, "tracked.txt", "initial\n")
+	pushBranch(t, repoDir, "master")
+	commitFile(t, repoDir, "tracked.txt", "updated\n")
+
+	log, err := logger.New()
+	if err != nil {
+		t.Fatalf("logger.New() error = %v", err)
+	}
+	defer log.Close()
+
+	exec := New(log)
+	repo := config.Repository{
+		Name:   "test-repo",
+		Path:   repoDir,
+		Branch: "master",
+	}
+
+	if err := exec.ExecuteRepository(repo); err != nil {
+		t.Fatalf("ExecuteRepository() error = %v", err)
+	}
+
+	hasUnpushedCommits, err := exec.hasUnpushedCommits(repoDir, "master")
+	if err != nil {
+		t.Fatalf("hasUnpushedCommits() error = %v", err)
+	}
+	if hasUnpushedCommits {
+		t.Fatal("hasUnpushedCommits() = true, want false after ExecuteRepository push")
+	}
+}
+
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()
 
 	cmd := exec.Command("git", "init", "-q", dir)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git init error = %v, output = %s", err, string(output))
+	}
+}
+
+func initBareGitRepo(t *testing.T, dir string) {
+	t.Helper()
+
+	cmd := exec.Command("git", "init", "--bare", "-q", dir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init --bare error = %v, output = %s", err, string(output))
+	}
+}
+
+func configureGitUser(t *testing.T, dir string) {
+	t.Helper()
+
+	runGit(t, dir, "config", "user.name", "Git Push Timer Test")
+	runGit(t, dir, "config", "user.email", "git-push-timer@example.invalid")
+}
+
+func addGitRemote(t *testing.T, dir, remote string) {
+	t.Helper()
+
+	runGit(t, dir, "remote", "add", "origin", remote)
+}
+
+func commitFile(t *testing.T, dir, name, content string) {
+	t.Helper()
+
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	runGit(t, dir, "add", ".")
+	runGit(t, dir, "commit", "-q", "-m", "test commit")
+}
+
+func pushBranch(t *testing.T, dir, branch string) {
+	t.Helper()
+
+	runGit(t, dir, "push", "-q", "-u", "origin", branch)
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %s error = %v, output = %s", strings.Join(args, " "), err, string(output))
 	}
 }
 
