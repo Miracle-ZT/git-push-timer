@@ -18,24 +18,21 @@ echo "下载依赖..."
 go mod download
 go mod tidy
 
-# 创建输出目录
-mkdir -p dist
-
 # macOS 编译
 echo "编译 macOS 版本..."
-GOOS=darwin GOARCH=amd64 go build -o dist/git-push-timer-darwin-amd64 ./cmd/git-push-timer
-echo "  -> dist/git-push-timer-darwin-amd64"
+GOOS=darwin GOARCH=amd64 go build -o git-push-timer ./cmd/git-push-timer
+echo "  -> git-push-timer"
 
 # Windows 编译
 echo "编译 Windows 版本..."
-GOOS=windows GOARCH=amd64 go build -o dist/git-push-timer-windows-amd64.exe ./cmd/git-push-timer
-echo "  -> dist/git-push-timer-windows-amd64.exe"
+GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
+echo "  -> git-push-timer.exe"
 
 echo "=== 编译完成 ==="
 echo ""
 echo "使用方式："
-echo "1. 在 dist/ 目录中找到对应平台的二进制文件"
-echo "2. 在同级目录下创建 config/repos.json 配置文件"
-echo "3. 运行二进制文件"
+echo "1. 在项目根目录中找到对应平台的二进制文件"
+echo "2. 确认 config/repos.json 配置文件存在"
+echo "3. 运行 ./git-push-timer"
 echo ""
-echo "示例配置已生成在 config/repos.json.example"
+echo "示例配置：config/repos.json.example"
