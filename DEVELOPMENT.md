@@ -77,44 +77,6 @@
 
 ---
 
-## 特殊配置说明
-
-### 多仓库独立 PAT 配置
-
-#### 场景
-如果用户为每个 GitHub 仓库分别生成独立的 PAT（Personal Access Token），并希望把多个 PAT 都存储到 macOS Keychain 中，就需要避免不同仓库之间互相覆盖 credential。
-
-#### 约束
-Git credential 存储基于 `protocol + host + username`，同一账号的多个仓库会共用一个 credential 条目，后输入的 PAT 会覆盖之前的。
-
-#### 推荐做法
-在 remote URL 中使用不同的"用户名标记"来区分：
-
-```bash
-# 仓库 1
-git remote set-url origin https://Miracle-ZT-git-push-timer@github.com/Miracle-ZT/git-push-timer.git
-git push
-# 输入 repo1 对应的 PAT
-
-# 仓库 2
-git remote set-url origin https://Miracle-ZT-other-repo@github.com/Miracle-ZT/other-repo.git
-git push
-# 输入 repo2 对应的 PAT
-```
-
-#### 原理
-- Git credential 的"键" = `protocol + host + username`
-- username 不同，credential 条目就不同
-- GitHub 认证时只看 PAT 是否有效，不验证 username
-- 钥匙串中会存储为独立条目：
-  - `github.com - Miracle-ZT-git-push-timer`
-  - `github.com - Miracle-ZT-other-repo`
-
-#### 验证方式
-打开 macOS **钥匙串访问** App，搜索 `github`，可以看到独立的条目。
-
----
-
 ## 项目结构
 
 ```
@@ -128,13 +90,16 @@ git-push-timer/
 │   └── scheduler/                           # 定时调度
 ├── config/
 │   └── repos.json.example                   # 配置示例
-├── docs/                                    # 排查记录与补充文档
+├── docs/
+│   ├── investigations/                      # 专题排查、复盘与验证记录
+│   └── issue-ledger.md                      # 跨专题问题台账
 ├── README.md                                # 项目说明
 ├── DEVELOPMENT.md                           # 开发说明
 ├── CLAUDE.md                                # Claude Code 协作说明
 ├── AGENTS.md                                # Codex 自定义指令与工作流规范
 ├── build.sh                                 # 本地构建脚本
 ├── release.sh                               # 发布打包脚本
+├── LICENSE
 ├── go.mod
 └── go.sum
 ```
@@ -142,6 +107,26 @@ git-push-timer/
 ---
 
 ## 构建命令
+
+本地构建可直接运行 [build.sh](./build.sh)：
+
+```bash
+./build.sh
+```
+
+该脚本会下载依赖，并在项目根目录生成 macOS 与 Windows 可执行文件：
+- `git-push-timer`
+- `git-push-timer.exe`
+
+发布打包使用 [release.sh](./release.sh)：
+
+```bash
+./release.sh v1.0.0
+```
+
+该脚本会将版本号写入 `main.version`，并在 `dist/` 目录生成带版本号的 zip 包，同时复制 `config/repos.json.example`。
+
+也可以手动执行以下命令：
 
 ```bash
 # 下载依赖
@@ -156,19 +141,19 @@ GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
 
 ---
 
-## 后续改进方向
+## 开发注意事项
 
-- [ ] Windows 平台测试
-- [ ] 路径 `~` 展开支持
-- [ ] 失败通知功能
-- [ ] CLI 管理命令（add/list/remove）
-- [ ] GUI 界面（可选）
+- 默认 Cron 表达式为 `*/5 * * * *`（每 5 分钟执行一次），定义在 `internal/scheduler/scheduler.go` 中的 `defaultCronSpec` 常量。
+- 修改默认频率需要调整 `defaultCronSpec`；单个仓库的频率可通过配置文件中的 `cronSpec` 字段覆盖。
+- 当前配置仅在调度器启动时读取；修改 `enabled` 或 `cronSpec` 后需要重启程序才能生效。
+- `config/repos.json` 与 `logs/` 属于本地运行文件，已在 `.gitignore` 中，不会被提交到 Git。
 
 ---
 
 ## 相关链接
 
 - GitHub 仓库：https://github.com/Miracle-ZT/git-push-timer
-- 用户文档：README.md
-- 开发指南：CLAUDE.md
-- Codex 指令：AGENTS.md
+- 用户文档：[README.md](./README.md)
+- Claude Code 记忆：[CLAUDE.md](./CLAUDE.md)
+- Codex 指令：[AGENTS.md](./AGENTS.md)
+- 问题台账：[docs/issue-ledger.md](./docs/issue-ledger.md)

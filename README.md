@@ -91,13 +91,23 @@
 ./git-push-timer
 
 # Windows
-git-push-timer-windows-amd64.exe
+git-push-timer.exe
 ```
 
 程序启动后：
 1. 从下一个匹配的 Cron 时间点开始检查
 2. 之后按 Cron 配置的时间点自动检查
 3. 按 Ctrl+C 退出
+
+自动提交时使用以下 commit message 格式：
+```text
+auto: yyyy-MM-dd HH:mm:ss
+```
+
+示例：
+```text
+auto: 2026-06-03 14:30:00
+```
 
 ### 5. 日志
 
@@ -108,9 +118,7 @@ logs/
   2026-04-01.log
 ```
 
-`logs/` 目录已在 `.gitignore` 中，不会被提交到 Git。
-
-## 自行编译
+## 本地编译
 
 ```bash
 # 安装依赖
@@ -125,33 +133,6 @@ GOOS=windows GOARCH=amd64 go build -o git-push-timer.exe ./cmd/git-push-timer
 
 编译后的二进制文件是独立的，无需安装 Go 运行时即可运行。
 
-## 项目结构
+## 开发说明
 
-```
-git-push-timer/
-├── cmd/
-│   └── git-push-timer/                       # 程序入口
-├── internal/
-│   ├── config/                              # 配置读取与解析
-│   ├── executor/                            # Git 检查、提交、推送
-│   ├── logger/                              # 日志输出
-│   └── scheduler/                           # 定时调度
-├── config/
-│   └── repos.json.example                   # 配置示例
-├── docs/                                    # 排查记录与补充文档
-├── README.md                                # 项目说明
-├── DEVELOPMENT.md                           # 开发说明
-├── build.sh                                 # 本地构建脚本
-├── release.sh                               # 发布打包脚本
-├── LICENSE
-├── .gitignore                               # Git 忽略规则
-├── go.mod
-└── go.sum
-```
-
-## 开发注意事项
-
-- 默认 Cron 表达式：`*/5 * * * *`（每 5 分钟执行一次），定义在 `internal/scheduler/scheduler.go` 中的 `defaultCronSpec` 常量
-- 修改频率需要改代码：调整 `defaultCronSpec` 的值，或修改配置文件中的 `cronSpec` 字段
-- 配置生效：修改 `enabled` 或 `cronSpec` 后需要重启程序
-- `config/repos.json` 是本地配置文件，已在 `.gitignore` 中，不会被提交
+开发相关信息见 [DEVELOPMENT.md](./DEVELOPMENT.md)。
